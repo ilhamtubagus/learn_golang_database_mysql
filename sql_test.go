@@ -285,3 +285,58 @@ func TestPrepareStmt(t *testing.T) {
 		fmt.Println("Inserted comment id:", id)
 	}
 }
+
+func TestTransaction(t *testing.T) {
+	db, err := GetConnection()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}(db)
+
+	ctx := context.Background()
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// do transaction
+	var isMaxCommentReached bool = false
+	for i := 0; i < 10; i++ {
+		email := fmt.Sprintf("user%d@gmail.com", i)
+		comment := fmt.Sprintf("comment %d", i)
+		script := "INSERT INTO comments (email, comment) VALUES (?,?)"
+		result, err := tx.ExecContext(ctx, script, email, comment)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		id, err := result.LastInsertId()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if id == 22 {
+			isMaxCommentReached = true
+		}
+		fmt.Println("Inserted comment id:", id)
+	}
+
+	if isMaxCommentReached {
+		fmt.Println("Max comment reached, rollback transaction")
+		err = tx.Rollback()
+		if err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		err = tx.Commit()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+}
