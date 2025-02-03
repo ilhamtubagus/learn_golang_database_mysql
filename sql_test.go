@@ -241,3 +241,47 @@ func TestAutoIncrement(t *testing.T) {
 
 	fmt.Println("Data inserted successfully")
 }
+
+func TestPrepareStmt(t *testing.T) {
+	db, err := GetConnection()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}(db)
+
+	ctx := context.Background()
+
+	// Prepare statement can be used for multiple executions within same connection
+	stmt, err := db.PrepareContext(ctx, "INSERT INTO comments (email, comment) VALUES (?,?)")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer func(stmt *sql.Stmt) {
+		err := stmt.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}(stmt)
+
+	for i := 0; i < 10; i++ {
+		email := fmt.Sprintf("user%d@gmail.com", i)
+		comment := fmt.Sprintf("comment %d", i)
+		// Exec context runs on same connection
+		result, err := stmt.ExecContext(ctx, email, comment)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		id, err := result.LastInsertId()
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Println("Inserted comment id:", id)
+	}
+}
