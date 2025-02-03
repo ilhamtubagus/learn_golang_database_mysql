@@ -211,3 +211,33 @@ func TestExecSqlParameter(t *testing.T) {
 
 	fmt.Println("Data inserted successfully")
 }
+
+func TestAutoIncrement(t *testing.T) {
+	db, err := GetConnection()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}(db)
+
+	ctx := context.Background()
+
+	script := "INSERT INTO comments (email, comment) VALUES ('fian@gmail.com', 'bismillah')"
+	result, err := db.ExecContext(ctx, script) // ExecContext can be used for insert, update, delete
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println("Inserted comment id:", id)
+
+	fmt.Println("Data inserted successfully")
+}
